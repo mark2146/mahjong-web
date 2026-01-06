@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<nav class="navbar">
+  <div class="nav-left" onclick="location.href='/dashboard'">
+    🀄 麻將戰績
+  </div>
+
+  <div class="nav-center">
+    Dashboard
+  </div>
+
+  <div class="nav-right">
+    <div class="avatar" onclick="toggleUserMenu()">👤</div>
+
+    <div class="user-menu" id="userMenu">
+      <button onclick="logout()">登出</button>
+    </div>
+  </div>
+</nav>
+<body>
+
+  <header class="header">
+    <h2>2026 麻將戰績</h2>
+  </header>
+
+  <section class="cards">
+    <div class="card pink">
+      <p>年度總損益</p>
+      <h3 id="totalProfit">-</h3>
+    </div>
+
+    <div class="card blue">
+      <p>勝場總收益</p>
+      <h3 id="winProfit">-</h3>
+    </div>
+
+    <div class="card beige">
+      <p>敗場總支出</p>
+      <h3 id="loseProfit">-</h3>
+    </div>
+
+    <div class="card dice">
+      <p>累積將數</p>
+      <h3 id="totalRounds">-</h3>
+    </div>
+  </section>
+
+    <section class="calendar">
+
+    <div class="cal-head">
+    <button class="nav-btn" onclick="prevMonth()">‹</button>
+    <h3 id="calTitle"></h3>
+    <button class="nav-btn" onclick="nextMonth()">›</button>
+    </div>
+
+    <!-- 星期標題 -->
+    <div class="dow">
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+    </div>
+
+    <!-- 月曆格子由 JS 生成 -->
+    <div class="grid" id="calendarGrid"></div>
+    </section>
+  <button class="fab" onclick="openModal()">＋</button>
+
+<!-- 新增對局 Modal -->
+<div class="modal" id="sessionModal">
+  <div class="modal-content">
+    <button class="close" onclick="closeModal()">✕</button>
+
+    <h2>新增對局</h2>
+
+    <label>日期</label>
+    <input type="date" id="date" required />
+
+    <label>牌友</label>
+    <input type="text" placeholder="輸入人員姓名" id="players" required />
+
+    <label>台數</label>
+    <div class="stakes" id="stakes">
+    <button type="button" class="stake-btn" data-stake="30/10" onclick="selectStake(this)">30/10</button>
+    <button type="button" class="stake-btn" data-stake="50/20" onclick="selectStake(this)">50/20</button>
+    <button type="button" class="stake-btn" data-stake="100/20" onclick="selectStake(this)">100/20</button>
+
+    </div>
+
+    <label>地點</label>
+    <input type="text" placeholder="地點" id="location" required />
+
+    <label>將數</label>
+    <input type="number" placeholder="將數" id="rounds" required />
+
+    <label>本局結果</label>
+    <input
+    type="number"
+    id="profit"
+    placeholder="贏填正數，輸填負數，例如：800 或 -300"
+    required 
+    />
+
+    <button class="save" onclick="saveSession()">儲存</button>
+  </div>
+</div>
+
+<!-- 當日對局清單 Modal -->
+<div class="modal" id="dayModal">
+  <div class="modal-content">
+    <button class="close" onclick="closeDayModal()">✕</button>
+
+    <h2 id="dayModalTitle">當日對局</h2>
+
+    <div id="daySessionList"></div>
+
+    <button class="save" onclick="openAddFromDay()">＋ 新增對局</button>
+  </div>
+</div>
+
+<script>
+
+function toggleUserMenu() {
+  const menu = document.getElementById("userMenu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+function logout() {
+  fetch("/auth/google/logout", {
+    method: "POST",
+    credentials: "include", // ⭐ 很重要
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("logout failed");
+    // ⭐ 登出成功後，前端自己跳頁
+    window.location.href = "/";
+  })
+  .catch(err => {
+    console.error(err);
+    alert("登出失敗");
+  });
+}
+
+/* =====================
+   Modal 開關
+===================== */
+function openModal() {
+  document.getElementById("sessionModal").style.display = "flex";
+}
+
+function closeModal() {
+  editingSessionId = null;
+  document.getElementById("sessionModal").style.display = "none";
+}
+
+/* =====================
+   台數選擇（單選）
+===================== */
+let selectedStake = null;
+
+function selectStake(btn) {
+  document
+    .querySelectorAll(".stake-btn")
+    .forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  selectedStake = btn.dataset.stake;
+}
+
+/* =====================
+   新增對局（真的存 DB）
+===================== */
+function saveSession() {
+  const payload = {
+    date: document.getElementById("date").value,
+    players: document.getElementById("players").value.trim(),
+    stake: selectedStake,
+    location: document.getElementById("location").value.trim(),
+    rounds: Number(document.getElementById("rounds").value),
+    profit: Number(document.getElementById("profit").value),
+  };
+
+  if (Number.isNaN(payload.profit)) {
+    alert("請輸入本局輸贏金額（正負數）");
+    return;
+  }
+
+  if (!payload.date || !payload.players || !payload.stake || !payload.rounds) {
+    alert("請填寫完整資料");
+    return;
+  }
+
+  // ⭐⭐ 關鍵：判斷新增 or 編輯
+  const isEdit = editingSessionId !== null;
+  const url = isEdit
+    ? `/api/sessions/${editingSessionId}`
+    : "/api/sessions";
+
+  const method = isEdit ? "PUT" : "POST";
+
+  fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("儲存失敗");
+      return res.json();
+    })
+    .then(() => {
+      editingSessionId = null;      // ⭐ 重置狀態
+      closeModal();
+      reloadDashboard();
+    })
+    .catch(err => {
+      console.error(err);
+      alert("儲存失敗，請再試一次");
+    });
+}
+
+
+/* =====================
+   Dashboard 重整入口
+===================== */
+function reloadDashboard() {
+  loadSummary();
+  reloadCalendar();
+}
+
+/* =====================
+   載入年度總覽卡片
+===================== */
+function loadSummary() {
+  fetch(`/api/sessions/summary?year=${YEAR}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("totalProfit").textContent =
+        data.total_profit ?? "-";
+
+      document.getElementById("winProfit").textContent =
+        data.win_profit ?? "-";
+
+      document.getElementById("loseProfit").textContent =
+        data.lose_profit ?? "-";
+
+      document.getElementById("totalRounds").textContent =
+        data.total_rounds ?? "-";
+    });
+}
+
+let currentDate = new Date();   // ⭐ 必須存在
+let YEAR, MONTH;
+
+function syncYM() {
+  YEAR = currentDate.getFullYear();
+  MONTH = currentDate.getMonth() + 1; // JS 月份 0–11
+}
+function prevMonth() {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  syncYM();
+  reloadCalendar();
+  updateCalTitle();
+  reloadDashboard();   
+
+}
+function nextMonth() {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  syncYM();
+  reloadCalendar();
+  updateCalTitle();
+  reloadDashboard();   
+}
+function updateCalTitle() {
+  document.getElementById("calTitle").textContent =
+    `${YEAR} 年 ${MONTH} 月`;
+}
+function pad2(n){ return String(n).padStart(2,"0"); }
+function ymd(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
+
+/* ===== 產生月曆骨架 ===== */
+function renderCalendarSkeleton(year, month){
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+
+  const firstDay = new Date(year, month-1, 1);
+  const firstDow = firstDay.getDay(); // 0=日
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  // 前面空白
+  for(let i=0;i<firstDow;i++){
+    const e = document.createElement("div");
+    e.className = "day empty";
+    grid.appendChild(e);
+  }
+
+  // 日期格
+  for(let d=1; d<=daysInMonth; d++){
+    const cell = document.createElement("div");
+    cell.className = "day";
+    cell.dataset.date = ymd(year,month,d);
+
+    cell.innerHTML = `
+      <div class="num">${d}</div>
+      <div class="amt"></div>
+    `;
+
+    cell.addEventListener("click", ()=>{
+        onDayClick(cell.dataset.date);
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+/* ===== 從 DB 套資料 ===== */
+async function loadCalendarData(year, month){
+  const res = await fetch("/api/sessions");
+  const sessions = await res.json();
+
+  const start = `${year}-${pad2(month)}-01`;
+  const end = `${year}-${pad2(month)}-${pad2(new Date(year,month,0).getDate())}`;
+
+  const daily = {};
+
+  sessions.forEach(s=>{
+    if(s.date>=start && s.date<=end){
+      daily[s.date] = (daily[s.date]||0) + Number(s.profit);
+    }
+  });
+
+  document.querySelectorAll(".day").forEach(cell=>{
+    const dt = cell.dataset.date;
+    if(!dt) return;
+
+    const amt = cell.querySelector(".amt");
+    cell.classList.remove("has-record","lose");
+    amt.textContent = "";
+
+    if(daily[dt]!=null){
+      const p = daily[dt];
+      amt.textContent = (p>0?"+":"") + p;
+
+      if(p>=0) cell.classList.add("has-record");
+      else cell.classList.add("lose");
+    }
+  });
+}
+
+async function reloadCalendar(){
+  renderCalendarSkeleton(YEAR,MONTH);
+  await loadCalendarData(YEAR,MONTH);
+}
+
+function onDayClick(date) {
+  fetch(`/api/sessions?date=${date}`)
+    .then(res => res.json())
+    .then(list => {
+      if (list.length === 0) {
+        // 沒資料 → 直接新增
+        openModal();
+        document.getElementById("date").value = date;
+      } else {
+        // 有資料 → 顯示當日清單
+        openDayModal(date, list);
+      }
+    });
+}
+
+function openAddFromDay() {
+  closeDayModal();
+  openModal();
+  document.getElementById("date").value = currentDay;
+}
+
+let currentDay = null;
+
+function openDayModal(date, sessions) {
+  currentDay = date;
+
+  document.getElementById("dayModalTitle").textContent = `${date} 對局紀錄`;
+
+  const list = document.getElementById("daySessionList");
+  list.innerHTML = "";
+
+  sessions.forEach((s, i) => {
+    const item = document.createElement("div");
+    item.className = "day-session-item";
+    item.innerHTML = `
+    <div class="session-row">
+        <div class="session-info">
+        <div>第 ${i+1} 局</div>
+        <div>牌友：${s.players}</div>
+        <div>台數：${s.stake}</div>
+        <div>地點：${s.location || "-"}</div>
+        <div>結果：${s.profit > 0 ? "+" : ""}${s.profit}</div>
+        </div>
+
+        <div class="session-actions">
+        <button onclick="editSession(${s.id})">✏️</button>
+        <button onclick="deleteSession(${s.id})">🗑</button>
+        </div>
+    </div>
+    <hr/>
+    `;
+    list.appendChild(item);
+  });
+
+  document.getElementById("dayModal").style.display = "flex";
+}
+
+function closeDayModal() {
+  document.getElementById("dayModal").style.display = "none";
+}
+
+function deleteSession(id) {
+  if (!confirm("確定要刪除這一局嗎？")) return;
+
+  fetch(`/api/sessions/${id}`, {
+    method: "DELETE",
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("刪除失敗");
+    return res.json();
+  })
+  .then(() => {
+    closeDayModal();
+    reloadDashboard();
+  })
+  .catch(err => {
+    console.error(err);
+    alert("刪除失敗");
+  });
+}
+
+let editingSessionId = null;
+
+function editSession(id) {
+  fetch(`/api/sessions/${id}`)
+    .then(res => res.json())
+    .then(s => {
+      editingSessionId = id;
+
+      openModal();
+
+      document.getElementById("date").value = s.date;
+      document.getElementById("players").value = s.players;
+      document.getElementById("location").value = s.location || "";
+      document.getElementById("rounds").value = s.rounds;
+      document.getElementById("profit").value = s.profit;
+
+      // 選台數
+      document.querySelectorAll(".stake-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.stake === s.stake);
+        if (btn.dataset.stake === s.stake) selectedStake = s.stake;
+      });
+    });
+}
+
+
+
+/* =====================
+   頁面初始化
+===================== */
+syncYM();
+updateCalTitle();
+reloadCalendar();
+reloadDashboard();   
+
+</script>
+
+</body>
+</html>

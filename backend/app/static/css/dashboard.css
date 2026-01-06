@@ -1,0 +1,415 @@
+body {
+  margin: 0;
+  background: #f5f7fb;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.nav-left {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nav-center {
+  font-size: 14px;
+  color: #666;
+}
+
+.nav-right {
+  position: relative;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.user-menu {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+  display: none;
+  min-width: 60px ;
+}
+
+.user-menu button {
+  padding: 10px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .nav-center {
+    display: none;
+  }
+}
+
+
+.header {
+  padding: 16px;
+  text-align: center;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+
+.card {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+  padding: 16px;
+  text-align: center;
+}
+
+.card p {
+  color: #6b7280;
+  font-weight: 500;
+font-size: 13px;
+  margin: 0;
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.pink { background: #ffd6de; }
+.blue { background: #d9efff; }
+.beige { background: #f6efe7; }
+.dice { background: #f3ede4; }
+
+.dow{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 0 16px 8px;
+  color:#666;
+  font-weight:600;
+  font-size:14px;
+  text-align:center;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.day{
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;  padding: 10px 0 8px;
+  text-align:center;
+  min-height:62px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  line-height:1;
+}
+
+.day.empty{
+  background:transparent;
+  border:none;
+}
+
+.day .num{
+  font-size:18px;
+  font-weight:700;
+}
+
+.day .amt{
+  margin-top:8px;
+  font-size:12px;
+  font-weight:700;
+  opacity:.95;
+}
+
+/* 有紀錄：變色 */
+.day.has-record{
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #ffffff;
+}
+
+.day.has-record .amt{
+  color: #ffffff;
+}
+
+/* 有紀錄但輸是負的：你也可以換成淡紅/灰 */
+.day.lose{
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+.day.lose .amt{
+  color: #7f1d1d;
+}
+.day:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+/* 浮動按鈕 */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f2a1b3;
+  color: white;
+  font-size: 28px;
+  border: none;
+}
+
+/* Modal */
+/* 基本 modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 當日對局清單 */
+#dayModal {
+  z-index: 1000;
+}
+
+/* 新增 / 編輯對局（一定要在最上層） */
+#sessionModal {
+  z-index: 1100;
+}
+
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 20px;
+
+  box-sizing: border-box;
+  position: relative;   /* ⭐ 關鍵 */
+}
+
+.modal-content h2 {
+  text-align: center;
+}
+
+.modal-content label {
+  font-size: 13px;
+  margin-top: 12px;
+  display: block;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+
+  box-sizing: border-box;
+}
+
+.stakes {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stakes button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  background: #f7f7f7;
+}
+
+.stakes button.active {
+  background: #f2a1b3;
+  color: white;
+}
+
+.save {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 999px;
+  border: none;
+  background: #f2a1b3;
+  color: white;
+}
+
+.close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  background: #f2f2f2;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+
+  font-size: 18px;
+  line-height: 32px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.close:active {
+  background: #e0e0e0;
+}
+
+.close {
+  background: rgba(0,0,0,0.05);
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f3f3;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: #f3f4f6;
+  transform: scale(1.05);
+}
+
+#calTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+#winProfit {
+  color: #22c55e;
+}
+
+#loseProfit {
+  color: #ef4444;
+}
+
+#totalRounds {
+  color: #111827;
+}
+.fab,
+.save,
+.stakes button.active {
+  background: #6366f1;
+}
+
+.fab:hover,
+.save:hover {
+  opacity: 0.9;
+}
+
+.nav-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+.calendar {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 20px 12px 24px;
+  margin: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+}
+
+/* =========================
+   📱 Mobile Calendar Fix
+========================= */
+@media (max-width: 768px) {
+
+  .calendar {
+    margin: 12px;
+    padding: 16px 8px 20px;
+  }
+
+  .grid {
+    gap: 8px;
+    padding: 0 8px 12px;
+  }
+
+  .dow {
+    gap: 8px;
+    padding: 0 8px 8px;
+    font-size: 12px;
+  }
+
+  /* 日期格：改成接近正方形 */
+  .day {
+    min-height: auto;              /* ❗ 移除固定高度 */
+    aspect-ratio: 1 / 1;           /* ✅ 關鍵：變正方形 */
+    border-radius: 14px;
+    padding: 6px 0;
+    justify-content: center;
+  }
+
+  .day .num {
+    font-size: 16px;
+  }
+
+  .day .amt {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  /* 有紀錄的不要那麼「長條感」 */
+  .day.has-record,
+  .day.lose {
+    border-radius: 14px;
+  }
+
+}

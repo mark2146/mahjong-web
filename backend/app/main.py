@@ -1,0 +1,54 @@
+# app/__init__.py
+import os
+from flask import Flask, render_template, session, redirect
+from app.extensions import db
+
+# ===== 匯入 API blueprints =====
+from app.api.sessions import sessions_bp
+from app.api.auth_google import auth_google_bp
+from app.api.auth_me import auth_me_bp
+from app.api.health import health_bp
+
+
+def create_app():
+    app = Flask(__name__)
+
+    # ===== 基本設定 =====
+    app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+
+    # ===== 資料庫設定（關鍵）=====
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        # Railway 給的有時是 postgres://，SQLAlchemy 要 postgresql://
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    else:
+        # 本機開發才用 sqlite
+        database_url = "sqlite:///mahjong.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # ===== 初始化 DB =====
+    db.init_app(app)
+
+    # ===== 註冊 API =====
+    app.register_blueprint(sessions_bp)
+    app.register_blueprint(auth_google_bp)
+    app.register_blueprint(auth_me_bp)
+    app.register_blueprint(health_bp)
+
+    # ===== HTML routes =====
+    @app.route("/")
+    def index():
+        if session.get("user_id"):
+            return redirect("/dashboard")
+        return render_template("index.html")
+
+    @app.route("/dashboard")
+    def dashboard():
+        if not session.get("user_id"):
+            return redirect("/")
+        return render_template("dashboard.html")
+
+    return app

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>麻將記帳｜私人帳本</title>
+
+    <!-- Flask static CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+
+            {% if not logged_in %}
+                <div class="title">你的麻將私人帳本</div>
+
+                <div class="subtitle">
+                    每一場對局、每一筆輸贏<br />
+                    只屬於你自己
+                </div>
+
+                <a class="login-btn" href="/auth/google/login">
+                    使用 Google 登入
+                </a>
+
+                <div class="hint">
+                    登入後才能查看與記錄對局
+                </div>
+
+            {% else %}
+                <div class="title">已登入</div>
+                <div class="subtitle">
+                    正在前往你的帳本…
+                </div>
+
+                <script>
+                    // 之後會換成 dashboard
+                    window.location.href = "/dashboard";
+                </script>
+            {% endif %}
+
+        </div>
+    </div>
+</body>
+</html>
