@@ -1,4 +1,4 @@
-from app.extensions import db
+from backend.app.extensions import db
 from datetime import date
 
 class GameSession(db.Model):

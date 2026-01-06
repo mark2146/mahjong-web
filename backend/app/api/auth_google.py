@@ -1,10 +1,9 @@
 import os
 import requests
-from flask import Blueprint, request, jsonify, redirect, url_for
+from flask import Blueprint, request, jsonify, redirect, url_for, session
 
-from app.models.user import User
-from app.extensions import db
-from flask import session
+from backend.app.models.user import User
+from backend.app.extensions import db
 
 # ✅ 1️⃣ 先宣告 Blueprint（一定要在最上面）
 auth_google_bp = Blueprint("auth_google", __name__, url_prefix="/auth/google")

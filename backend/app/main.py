@@ -1,14 +1,13 @@
-# app/__init__.py
+# backend/app/__init__.py
 import os
 from flask import Flask, render_template, session, redirect
-from app.extensions import db
+from backend.app.extensions import db
 
 # ===== 匯入 API blueprints =====
-from app.api.sessions import sessions_bp
-from app.api.auth_google import auth_google_bp
-from app.api.auth_me import auth_me_bp
-from app.api.health import health_bp
-
+from backend.app.api.sessions import sessions_bp
+from backend.app.api.auth_google import auth_google_bp
+from backend.app.api.auth_me import auth_me_bp
+from backend.app.api.health import health_bp
 
 def create_app():
     app = Flask(__name__)

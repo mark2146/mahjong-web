@@ -1,9 +1,10 @@
-# app/api/sessions.py
+# backend/app/api/sessions.py
 from flask import Blueprint, request, session, jsonify
-from app.models.game_session import GameSession
-from app.extensions import db
 from datetime import datetime
 from sqlalchemy import func, case
+
+from backend.app.models.game_session import GameSession
+from backend.app.extensions import db
 
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/api/sessions")
 
