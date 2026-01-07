@@ -6,3 +6,4 @@ gunicorn
 requests
 python-dotenv
 flask-login
+sendgrid>=6.11.0

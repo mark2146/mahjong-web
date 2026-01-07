@@ -1,40 +1,29 @@
 import os
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 report_bp = Blueprint("report", __name__)
 
 @report_bp.route("/api/report", methods=["POST"])
+@login_required
 def report_problem():
-    try:
-        data = request.json or {}
-        content = data.get("content", "").strip()
+    data = request.json or {}
+    content = (data.get("content") or "").strip()
 
-        if not content:
-            return jsonify({"error": "內容不能為空"}), 400
+    if not content:
+        return jsonify({"error": "內容不能為空"}), 400
 
-        mail_user = os.getenv("MAIL_USER")
-        mail_password = os.getenv("MAIL_PASSWORD")
+    user_email = current_user.email
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        print("MAIL_USER =", mail_user)
-        print("MAIL_PASSWORD =", "有值" if mail_password else "❌ 沒有值")
-
-        if not mail_user or not mail_password:
-            raise RuntimeError("MAIL_USER 或 MAIL_PASSWORD 未設定")
-
-        user_email = getattr(current_user, "email", "unknown")
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        msg = EmailMessage()
-        msg["Subject"] = "【麻將日記】使用者問題回報"
-        msg["From"] = mail_user
-        msg["To"] = mail_user
-        msg["Reply-To"] = user_email
-
-        msg.set_content(f"""
+    message = Mail(
+        from_email=os.getenv("SENDGRID_FROM_EMAIL"),
+        to_emails=os.getenv("SENDGRID_FROM_EMAIL"),  # 寄給你自己
+        subject="【麻將日記】使用者問題回報",
+        plain_text_content=f"""
 回報時間：
 {now}
 
@@ -43,17 +32,15 @@ def report_problem():
 
 問題描述：
 {content}
-""")
+"""
+    )
+    # 讓你可以直接回信給使用者
+    message.reply_to = user_email
 
-        print("📨 準備連線 Gmail SMTP…")
-
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(mail_user, mail_password)
-            smtp.send_message(msg)
-
-        print("✅ 寄信成功")
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        sg.send(message)
         return jsonify({"ok": True})
-
     except Exception as e:
-        print("❌ 寄信失敗：", repr(e))
-        return jsonify({"error": "send mail failed"}), 500
+        print("❌ SendGrid error:", e)
+        return jsonify({"error": "寄信失敗"}), 500
