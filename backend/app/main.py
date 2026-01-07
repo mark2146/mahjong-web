@@ -47,6 +47,7 @@ def create_app():
     app.register_blueprint(auth_google_bp)
     app.register_blueprint(auth_me_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(report_bp)
 
     # ===== HTML routes =====
     @app.route("/")
