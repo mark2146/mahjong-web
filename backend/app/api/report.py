@@ -1,14 +1,13 @@
 import os
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_login import current_user
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 report_bp = Blueprint("report", __name__)
 
 @report_bp.route("/api/report", methods=["POST"])
-@login_required
 def report_problem():
     data = request.json or {}
     content = (data.get("content") or "").strip()
@@ -16,7 +15,13 @@ def report_problem():
     if not content:
         return jsonify({"error": "內容不能為空"}), 400
 
-    user_email = current_user.email
+    # ✅ 不再強制登入
+    user_email = (
+        current_user.email
+        if current_user.is_authenticated
+        else "anonymous@mahjong-diary"
+    )
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     message = Mail(
@@ -34,8 +39,10 @@ def report_problem():
 {content}
 """
     )
-    # 讓你可以直接回信給使用者
-    message.reply_to = user_email
+
+    # 只有真的有使用者 email 才設 Reply-To
+    if user_email != "anonymous@mahjong-diary":
+        message.reply_to = user_email
 
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
