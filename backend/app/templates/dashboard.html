@@ -6,16 +6,18 @@
   <title>Dashboard</title>
   <link rel="stylesheet" href="/static/css/dashboard.css" />
 </head>
+<body>
+  
 <nav class="navbar">
   <div class="nav-left" onclick="location.href='/dashboard'">
     🀄 麻將戰績
   </div>
 
-  <div class="nav-center">
-    Dashboard
-  </div>
-
   <div class="nav-right">
+    <button class="nav-report-btn" onclick="openReport()">
+      建議/回饋
+    </button>
+
     <div class="avatar" onclick="toggleUserMenu()">👤</div>
 
     <div class="user-menu" id="userMenu">
@@ -23,8 +25,9 @@
     </div>
   </div>
 </nav>
-<body>
 
+
+</nav>
   <header class="header">
     <h2>2026 麻將戰績</h2>
   </header>
@@ -68,6 +71,26 @@
     <div class="grid" id="calendarGrid"></div>
     </section>
   <button class="fab" onclick="openModal()">＋</button>
+
+<div id="reportModal" class="report-overlay">
+  <div class="report-modal">
+    <div class="report-header">
+      <h2>問題回報</h2>
+      <button class="report-close" onclick="closeReport()">✕</button>
+    </div>
+
+    <textarea
+      id="reportContent"
+      class="report-textarea"
+      placeholder="請描述你遇到的問題或是有任何建議"
+    ></textarea>
+
+    <div class="report-actions">
+      <button class="btn-cancel" onclick="closeReport()">取消</button>
+      <button class="btn-submit" onclick="submitReport()">送出</button>
+    </div>
+  </div>
+</div>
 
 <!-- 新增對局 Modal -->
 <div class="modal" id="sessionModal">
@@ -122,6 +145,40 @@
 </div>
 
 <script>
+
+function openReport() {
+  document.getElementById("reportModal").style.display = "flex";
+}
+
+function closeReport() {
+  document.getElementById("reportModal").style.display = "none";
+}
+
+function submitReport() {
+  const content = document.getElementById("reportContent").value;
+  if (!content) {
+    alert("你至少打點字");
+    return;
+  }
+
+  fetch("/api/report", {
+    method: "POST",
+    credentials: "include",   // ⭐⭐⭐ 關鍵在這一行
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content })
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("send failed");
+    return res.json();
+  })
+  .then(() => {
+    alert("已送出");
+    closeReport();
+  })
+  .catch(() => {
+    alert("送出失敗，請重新登入後再試");
+  });
+}
 
 function toggleUserMenu() {
   const menu = document.getElementById("userMenu");
@@ -458,8 +515,6 @@ function editSession(id) {
       });
     });
 }
-
-
 
 /* =====================
    頁面初始化

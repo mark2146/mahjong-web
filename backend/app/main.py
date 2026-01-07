@@ -8,6 +8,10 @@ from backend.app.api.sessions import sessions_bp
 from backend.app.api.auth_google import auth_google_bp
 from backend.app.api.auth_me import auth_me_bp
 from backend.app.api.health import health_bp
+from backend.app.api.report import report_bp
+
+from backend.app.extensions import db, login_manager
+from backend.app.models.user import User
 
 def create_app():
     app = Flask(__name__)
@@ -30,7 +34,14 @@ def create_app():
 
     # ===== 初始化 DB =====
     db.init_app(app)
+    
+    login_manager.init_app(app)
 
+    # user loader（一定要有）
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+    
     # ===== 註冊 API =====
     app.register_blueprint(sessions_bp)
     app.register_blueprint(auth_google_bp)
