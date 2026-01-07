@@ -15,7 +15,11 @@ from backend.app.models.user import User
 
 def create_app():
     app = Flask(__name__)
-
+    app.config.update(
+        SECRET_KEY=os.getenv("SECRET_KEY", "dev"),
+        SESSION_COOKIE_SAMESITE="None",   # ⭐⭐⭐ 關鍵
+        SESSION_COOKIE_SECURE=True,       # ⭐⭐⭐ 關鍵
+    )
     # ===== 基本設定 =====
     app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
 
