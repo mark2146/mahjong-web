@@ -63,6 +63,8 @@ gunicorn 'backend.app.main:create_app()'
 - Add rate limiting to login and report endpoints, and avoid returning upstream OAuth error payloads to clients.
 - Local SQLite databases are runtime data and must not be committed.
 
+The current implementation validates OAuth `state`, enforces same-origin checks on state-changing requests, uses HttpOnly/SameSite cookies, and refuses production startup without an explicit Flask secret. Add rate limiting and a dedicated CSRF-token library before operating at larger public scale.
+
 ## Project structure
 
 ```text

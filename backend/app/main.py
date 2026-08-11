@@ -1,6 +1,7 @@
 # backend/app/__init__.py
 import os
-from flask import Flask, render_template, session, redirect
+from urllib.parse import urlparse
+from flask import Flask, render_template, session, redirect, request, jsonify
 from backend.app.extensions import db
 
 # ===== 匯入 API blueprints =====
@@ -15,13 +16,30 @@ from backend.app.models.user import User
 
 def create_app():
     app = Flask(__name__)
+    environment = os.getenv("APP_ENV", "development").lower()
+    secret_key = os.getenv("FLASK_SECRET_KEY")
+    if not secret_key and environment == "production":
+        raise RuntimeError("FLASK_SECRET_KEY must be set in production")
     app.config.update(
-        SECRET_KEY=os.getenv("SECRET_KEY", "dev"),
-        SESSION_COOKIE_SAMESITE="None",   # ⭐⭐⭐ 關鍵
-        SESSION_COOKIE_SECURE=True,       # ⭐⭐⭐ 關鍵
+        SECRET_KEY=secret_key or "development-only-change-me",
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=environment == "production",
+        MAX_CONTENT_LENGTH=64 * 1024,
     )
-    # ===== 基本設定 =====
-    app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+
+    @app.before_request
+    def enforce_same_origin_for_state_changes():
+        if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+            return None
+        source = request.headers.get("Origin") or request.headers.get("Referer")
+        if not source:
+            return jsonify(error="Missing request origin"), 403
+        source_url = urlparse(source)
+        expected_url = urlparse(request.host_url)
+        if (source_url.scheme, source_url.netloc) != (expected_url.scheme, expected_url.netloc):
+            return jsonify(error="Invalid request origin"), 403
+        return None
 
     # ===== 資料庫設定（關鍵）=====
     database_url = os.getenv("DATABASE_URL")

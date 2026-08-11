@@ -14,6 +14,8 @@ def report_problem():
 
     if not content:
         return jsonify({"error": "內容不能為空"}), 400
+    if len(content) > 2000:
+        return jsonify({"error": "內容過長"}), 400
 
     # ✅ 不再強制登入
     user_email = (
@@ -48,6 +50,6 @@ def report_problem():
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         sg.send(message)
         return jsonify({"ok": True})
-    except Exception as e:
-        print("❌ SendGrid error:", e)
+    except Exception:
+        print("SendGrid request failed")
         return jsonify({"error": "寄信失敗"}), 500

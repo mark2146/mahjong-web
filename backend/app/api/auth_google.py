@@ -1,4 +1,7 @@
 import os
+import hmac
+import secrets
+from urllib.parse import urlencode
 import requests
 from flask import Blueprint, request, jsonify, redirect, url_for, session
 
@@ -21,6 +24,8 @@ def logout():
 # ✅ 2️⃣ login route
 @auth_google_bp.get("/login")
 def google_login():
+    state = secrets.token_urlsafe(32)
+    session["oauth_state"] = state
     params = {
         "client_id": os.getenv("GOOGLE_CLIENT_ID"),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI"),
@@ -28,11 +33,10 @@ def google_login():
         "scope": "openid email profile",
         "access_type": "offline",
         "prompt": "consent",
+        "state": state,
     }
 
-    url = GOOGLE_AUTH_URL + "?" + "&".join(
-        f"{k}={v}" for k, v in params.items()
-    )
+    url = GOOGLE_AUTH_URL + "?" + urlencode(params)
 
     # 🔥 關鍵就在這一行
     return redirect(url)
@@ -40,6 +44,11 @@ def google_login():
 # ✅ 3️⃣ callback route（這裡才開始用 auth_google_bp）
 @auth_google_bp.get("/callback")
 def google_callback():
+    expected_state = session.pop("oauth_state", "")
+    supplied_state = request.args.get("state", "")
+    if not expected_state or not hmac.compare_digest(expected_state, supplied_state):
+        return jsonify(error="Invalid OAuth state"), 400
+
     code = request.args.get("code")
     if not code:
         return jsonify(error="Missing code"), 400
@@ -57,11 +66,13 @@ def google_callback():
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 
+    if not token_resp.ok:
+        return jsonify(error="OAuth token exchange failed"), 400
     token_data = token_resp.json()
     access_token = token_data.get("access_token")
 
     if not access_token:
-        return jsonify(error="Failed to obtain access token", detail=token_data), 400
+        return jsonify(error="Failed to obtain access token"), 400
 
     # 取得 Google 使用者資訊
     userinfo_resp = requests.get(
@@ -74,7 +85,7 @@ def google_callback():
     email = userinfo.get("email")
 
     if not google_id or not email:
-        return jsonify(error="Invalid Google user data", userinfo=userinfo), 400
+        return jsonify(error="Invalid Google user data"), 400
 
     # 查或建立使用者
     user = User.query.filter_by(google_id=google_id).first()
